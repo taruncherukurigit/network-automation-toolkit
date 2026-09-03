@@ -17,6 +17,13 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--ink); font-family: 'Space Grotesk', sans-serif; line-height: 1.5; }
   .wrap { max-width: 900px; margin: 0 auto; padding: 0 28px; }
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px; border-bottom: 2px solid var(--ink); max-width: 900px; margin: 0 auto; }
+  nav .name { font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
+  nav .name span { color: var(--accent); }
+  nav .navlinks { display: flex; gap: 24px; }
+  nav .navlinks a { color: var(--ink); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+  nav .navlinks a:hover { color: var(--accent); }
+  @media (max-width: 600px) { nav { flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; } }
   header { padding: 56px 0 32px; border-bottom: 4px solid var(--ink); }
   .eyebrow { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 10px; }
   h1 { font-size: 3.4rem; font-weight: 700; line-height: 0.98; letter-spacing: -0.02em; margin-bottom: 20px; }
@@ -57,6 +64,15 @@
 </style>
 </head>
 <body>
+<nav>
+  <div class="name">Tarun Cherukuri <span>/ Cherwood Corporation</span></div>
+  <div class="navlinks">
+    <a href="https://tarunc.com">tarunc.com</a>
+    <a href="https://cherwood.tarunc.com">Cherwood Health</a>
+    <a href="https://github.com/taruncherukurigit/network-automation-toolkit">GitHub</a>
+    <a href="https://www.linkedin.com/in/dsstaruncherukuri/">LinkedIn</a>
+  </div>
+</nav>
 <div class="wrap">
   <header>
     <div class="eyebrow">Cherwood Corporation — Division 03</div>
