@@ -1,0 +1,30 @@
+devices = [
+    {
+        "device_name": "1921",
+        "host": "10.10.99.2",
+        "device_type": "cisco_ios",
+        "username": "svc-automation",
+        "use_keys": True,
+        "key_file": "/root/.ssh/svc_automation_rsa",
+        "disabled_algorithms": {"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]},
+        "conn_timeout": 20,
+    },
+    {
+        "device_name": "3560E",
+        "host": "10.10.10.2",
+        "device_type": "cisco_ios",
+        "username": "svc-automation",
+        "use_keys": True,
+        "key_file": "/root/.ssh/svc_automation_rsa",
+        "disabled_algorithms": {"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]},
+        "conn_timeout": 20,
+    },
+    {
+        "device_name": "FortiGate",
+        "host": "10.10.60.1",
+        "device_type": "fortinet",
+        "username": "svc-automation",
+        "use_keys": True,
+        "key_file": "/root/.ssh/svc_automation_rsa",
+    },
+]
