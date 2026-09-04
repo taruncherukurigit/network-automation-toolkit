@@ -102,6 +102,109 @@ This normalization means the drift check can no longer report *which specific* e
 
 ---
 
+## Bug #3 — Site silently served the wrong content (IPv6/IPv4 loopback mismatch)
+
+### Symptom
+
+After deploying `networksolutions.tarunc.com` (new nginx server block on the existing DMZ container, one new Cloudflare Tunnel ingress line — the same pattern used for every other Cherwood site on this container), the public URL intermittently served **Cherwood Health's** content instead of the new site's. No error, no failed request — just the wrong page, and inconsistently: some requests returned the correct site, others didn't, with no obvious pattern.
+
+### What didn't work, checked in order with real evidence at each step
+
+- **DNS resolution** — confirmed correct against both the local resolver and an external one (`nslookup ... 8.8.8.8`), returning real Cloudflare IPs.
+- **Cloudflare's edge cache** — `cf-cache-status` header returned `DYNAMIC`, meaning Cloudflare wasn't caching the response at all; every request was reaching the origin fresh.
+- **The file on disk** — `grep "<title>"` and `wc -l` against the actual file confirmed the correct content was sitting at the expected path, byte-for-byte.
+- **nginx's config syntax and the enabled-sites symlink** — both confirmed correct via `nginx -t` and directly reading the config file.
+- **The Cloudflare Tunnel's own ingress rule matching** — `cloudflared tunnel ingress rule <url>` (a built-in validator) confirmed the tunnel was correctly routing the hostname to `http://localhost:80`, the intended target.
+
+Every individual layer checked out clean. The bug wasn't hiding behind a wrong answer anywhere — each component was doing exactly what it was told.
+
+### Root cause
+
+**`localhost` is not one fixed address.** It can resolve to `127.0.0.1` (IPv4) or `::1` (IPv6), and which one gets used depends on the connecting process's resolver behavior — not something visible in any of the configs above. The existing `default` nginx server block (serving Cherwood Health) had explicit listeners on both:
+```nginx
+listen 80;
+listen [::]:80;
+```
+The newly-added `itsolutions` server block only had:
+```nginx
+listen 80;
+```
+When `cloudflared` connected over the IPv4 loopback path, it correctly reached `itsolutions`. When it connected over `::1` instead, there was no server block listening on that address for port 80 at all — so nginx fell through to `default`, the one block that *did* have an IPv6 listener, silently serving the wrong site with a normal `200 OK`.
+
+This is why the symptom looked random: it wasn't a stable failure, it was a coin-flip on which loopback address the connecting process happened to use for any given request.
+
+### The fix
+
+Add the missing IPv6 listener to the new site's config:
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name networksolutions.tarunc.com;
+    root /var/www/itsolutions;
+    index index.html;
+}
+```
+Reload nginx. Verified by testing both loopback paths explicitly and independently:
+```bash
+curl -s -4 https://networksolutions.tarunc.com | grep "<title>"
+curl -s -6 https://networksolutions.tarunc.com | grep "<title>"
+```
+
+The identical bug then recurred on a second, unrelated port (`8081`, serving `tarunc.com`) — a pre-existing server block that had been running correctly for weeks, apparently because whichever loopback path it was getting hit on had simply never surfaced the gap until this session's more careful dual-stack testing. Same fix applied: add `listen [::]:8081;` alongside the existing `listen 8081;`.
+
+### Lesson
+
+A `curl` test against `http://localhost:<port>` from the same host is not equivalent to testing the real public URL — it silently defaults to one address family and can report success while the actual internet-facing path is broken. Any server block fronted by a reverse proxy or tunnel needs both `listen` directives, even in a single-stack-looking environment, since the *connecting* process's address family isn't something the server side controls or can assume.
+
+---
+
+## Bug #4 — FortiGuard DNS filtering blocked new and existing subdomains, unpredictably
+
+### Symptom
+
+While diagnosing Bug #3, `nslookup networksolutions.tarunc.com` returned `208.91.112.55` — not a Cloudflare IP. That address turned out to be the FortiGate's own internal DNS-filter block page IP (a signature already known from an earlier Cherwood Health incident involving DuckDNS and `api.cloudflare.com`). Static domain-filter allow entries were added for `networksolutions.tarunc.com` via the GUI twice; both times, a CLI `show` immediately after confirmed neither entry had actually saved — the same silent GUI-save failure pattern observed earlier in the build with crontab and a dashboard screenshot filename. Adding the entries directly via CLI, then verifying with `show`, resolved it correctly.
+
+Later in the same session, `tarunc.com` itself — a domain that had been live and unblocked for weeks — also began resolving to the same block-page IP, with no corresponding change made to it. It required its own static allow entries (`tarunc.com` and `*.tarunc.com`), added via CLI directly this time rather than the GUI.
+
+### What this rules out, and what remains genuinely uncertain
+
+A same-second test against a throwaway hostname created purely to test the theory (`netsoltest.tarunc.com`) hit the identical block despite having no history at all — which rules out anything specific to the string "networksolutions" (an earlier working theory, since that string resembles a real domain registrar's brand). The FortiGate's category-based DNS filter grid was checked directly and does **not** include a "Newly Observed/Registered Domain" category on this build (only "Potentially Liable" and "Security Risk" groups are configured) — ruling out that theory too, which had seemed like the natural explanation for age-correlated blocking.
+
+**What's confirmed:** DNS resolution for names under `tarunc.com` can be intercepted by the FortiGate and redirected to its own block page, and static domain-filter allow-list entries reliably fix it once they're confirmed to have actually saved via CLI.
+
+**What's not yet confirmed:** the exact trigger. It doesn't appear to be a static keyword match, a domain-age category, or anything visible in the currently-configured category groups. Given `tarunc.com` itself was affected with no config change made to it, live FortiGuard cloud-reputation lookups (rather than a local, static rule) are the most likely explanation — but this wasn't independently proven and would need further investigation if it recurs.
+
+### The fix, and why CLI over GUI
+
+```
+config dnsfilter domain-filter
+    edit 1
+        config entries
+            edit <next-id>
+                set domain "<domain>"
+                set action allow
+            next
+        end
+    next
+end
+```
+Followed immediately by:
+```
+config dnsfilter domain-filter
+    edit 1
+        show
+    next
+end
+```
+The `show` step isn't optional — this session's GUI "Create New" silently failed to persist the entry on two separate occasions, something a GUI success message gave no indication of. Every fix in this session that stuck was verified with a direct CLI read-back immediately after writing it.
+
+### Lesson
+
+On this FortiGate, GUI edits to DNS filter profiles cannot be trusted to have saved without an independent CLI verification step — this was true for the domain-filter static list at least three separate times across two nights of work. Treat any GUI "success" on this profile as unconfirmed until `show`'d back from the CLI.
+
+---
+
 ## Cross-cutting lesson
 
-Both bugs were found the same way: **isolate the variable, look at real evidence (debug logs, direct diffs), don't trust the first plausible-looking explanation.** The first patch attempt for Bug #1 was wrong. The first assumption about Bug #2 ("the FortiGate config actually changed") was wrong. In both cases, the fix that actually worked only became clear after generating real, direct evidence and reading it carefully — the same discipline Cherwood Health's own troubleshooting log describes as *"a check that has never been proven to fail against a real fault is not trustworthy."*
+Both of the first two bugs were found the same way: **isolate the variable, look at real evidence (debug logs, direct diffs), don't trust the first plausible-looking explanation.** The first patch attempt for Bug #1 was wrong. The first assumption about Bug #2 ("the FortiGate config actually changed") was wrong. The deployment bugs (#3 and #4) extended the same discipline into a different layer — network and DNS rather than code — and needed the same thing: rule out each real component one at a time with direct evidence, rather than assume the most familiar-looking suspect (caching, in both cases) was the actual cause. In every case, the fix that actually worked only became clear after generating real, direct evidence and reading it carefully — the same discipline Cherwood Health's own troubleshooting log describes as *"a check that has never been proven to fail against a real fault is not trustworthy."*
