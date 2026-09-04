@@ -17,10 +17,10 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--ink); font-family: 'Space Grotesk', sans-serif; line-height: 1.5; }
   .wrap { max-width: 900px; margin: 0 auto; padding: 0 28px; }
-  nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px; border-bottom: 2px solid var(--ink); max-width: 900px; margin: 0 auto; }
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 28px; border-bottom: 2px solid var(--ink); max-width: 900px; margin: 0 auto; flex-wrap: wrap; gap: 12px; }
   nav .name { font-weight: 700; font-size: 1rem; letter-spacing: -0.01em; }
   nav .name span { color: var(--accent); }
-  nav .navlinks { display: flex; gap: 24px; }
+  nav .navlinks { display: flex; gap: 20px; flex-wrap: wrap; }
   nav .navlinks a { color: var(--ink); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
   nav .navlinks a:hover { color: var(--accent); }
   @media (max-width: 600px) { nav { flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; } }
@@ -69,6 +69,7 @@
   <div class="navlinks">
     <a href="https://tarunc.com">tarunc.com</a>
     <a href="https://cherwood.tarunc.com">Cherwood Health</a>
+    <a href="https://packetgeist.tarunc.com">Packetgeist</a>
     <a href="https://github.com/taruncherukurigit/network-automation-toolkit">GitHub</a>
     <a href="https://www.linkedin.com/in/dsstaruncherukuri/">LinkedIn</a>
   </div>
@@ -81,6 +82,7 @@
     <div class="links">
       <a href="https://github.com/taruncherukurigit/network-automation-toolkit">GITHUB →</a>
       <a href="https://cherwood.tarunc.com">CHERWOOD HEALTH →</a>
+      <a href="https://packetgeist.tarunc.com">PACKETGEIST →</a>
       <a href="https://tarunc.com">TARUNC.COM →</a>
     </div>
   </header>
@@ -89,16 +91,17 @@
     <div class="stat"><div class="num">03</div><div class="label">Devices managed</div></div>
     <div class="stat"><div class="num">01</div><div class="label">System live nightly</div></div>
     <div class="stat"><div class="num">00</div><div class="label">Shared credentials</div></div>
-    <div class="stat"><div class="num">02</div><div class="label">Bugs root-caused</div></div>
+    <div class="stat"><div class="num">04</div><div class="label">Bugs root-caused</div></div>
   </div>
 
   <section>
     <h2>Build log</h2>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">VLAN 60 + MSP-scoped firewall policy</div><p>Isolated segment, narrow SSH+SNMP policies, explicit logged DENY backstop.</p></div></div>
-    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Dedicated service account</div><p>svc-automation — independently revocable, no shared admin login.</p></div></div>
+    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Dedicated service account</div><p>svc-automation — independently revocable, no shared admin login. Also caught and fixed a real gap: it briefly shared a password hash with the admin account on the Cisco devices, closed with unique credentials.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Netmiko/Cisco IOS SSH bug</div><p>12-year-old open-source compatibility bug, root-caused and fixed.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Git version history + drift detection</div><p>Every pull committed, real changes flagged accurately.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Live status dashboard</div><p>Internal Flask page, Trusted-VLAN-only access.</p></div></div>
+    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Public deployment — repo, Pages, self-hosted site</div><p>Pushed to GitHub, GitHub Pages mirror enabled, self-hosted at this domain via the existing DMZ container and Cloudflare Tunnel. Two real deployment bugs found and fixed along the way — see below.</p></div></div>
     <div class="log-row"><div class="tag next">Next</div><div><div class="log-title">Automated Topology Discovery</div><p>CDP/LLDP mapping, Graphviz/networkx visualization.</p></div></div>
   </section>
 
@@ -112,16 +115,24 @@
       <h3>Bug 02 — false alerts, every single night</h3>
       <p>FortiGate re-encrypts fields with a random salt on every pull — real ciphertext, zero real change. Would have buried every genuine alert forever. Fixed with normalization before comparison, verified against an empty diff.</p>
     </div>
+    <div class="bug">
+      <h3>Bug 03 — the site silently served the wrong content</h3>
+      <p>After deploying this site, the public URL intermittently showed Cherwood Health's page instead. DNS, Cloudflare's cache, the file on disk, and nginx's config all checked out individually correct — the real cause was <code>localhost</code> resolving to either <code>127.0.0.1</code> or <code>::1</code> depending on the connecting process, and this site's nginx block only listened on the IPv4 address. Whichever loopback path the tunnel happened to use decided which site got served. Fixed by adding <code>listen [::]:80;</code> alongside the existing listener — found the identical gap on a second, unrelated port serving <code>tarunc.com</code> shortly after.</p>
+    </div>
+    <div class="bug">
+      <h3>Bug 04 — DNS filtering blocked the domain, twice, for different reasons</h3>
+      <p>The FortiGate's DNS filter redirected this domain to its own block page. A brand-new throwaway test hostname hit the identical block, ruling out anything specific to this project's name. The category grid didn't show an age-based rule either — the exact trigger stayed unconfirmed. What's proven: static domain-filter allow entries fix it, but the GUI silently failed to save them twice; only a CLI write followed by a CLI read-back reliably worked.</p>
+    </div>
   </section>
 
   <section>
     <h2>Stack</h2>
     <div class="stack">
-      <span>PYTHON 3.11</span><span>NETMIKO</span><span>PARAMIKO</span><span>GIT</span><span>FLASK</span><span>CRON</span><span>CISCO IOS</span><span>FORTIOS</span>
+      <span>PYTHON 3.11</span><span>NETMIKO</span><span>PARAMIKO</span><span>GIT</span><span>FLASK</span><span>CRON</span><span>CISCO IOS</span><span>FORTIOS</span><span>NGINX</span><span>CLOUDFLARE TUNNEL</span>
     </div>
   </section>
 
-  <footer>Division 03 of the <a href="https://tarunc.com">Cherwood Corporation</a> portfolio — <a href="https://github.com/taruncherukurigit/network-automation-toolkit">full repo on GitHub</a></footer>
+  <footer>Division 03 of the <a href="https://tarunc.com">Cherwood Corporation</a> portfolio — <a href="https://cherwood.tarunc.com">Cherwood Health</a> · <a href="https://packetgeist.tarunc.com">Packetgeist</a> · <a href="https://github.com/taruncherukurigit/network-automation-toolkit">full repo on GitHub</a> · <a href="https://taruncherukurigit.github.io/network-automation-toolkit/">GitHub Pages mirror</a></footer>
 </div>
 </body>
 </html>
