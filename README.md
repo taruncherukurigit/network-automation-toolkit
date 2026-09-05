@@ -10,6 +10,7 @@ Cherwood Network Solutions is Division 03 of the Cherwood Corporation portfolio,
 > 🔁 GitHub Pages mirror: [taruncherukurigit.github.io/network-automation-toolkit](https://taruncherukurigit.github.io/network-automation-toolkit/)
 > 💼 Personal portfolio: [tarunc.com](https://tarunc.com)
 > 📦 Parent project: [cherwood-health](https://github.com/taruncherukurigit/cherwood-health) · [plainsboro-library-survey](https://github.com/taruncherukurigit/plainsboro-library-survey)
+> 🗺️ Automated Topology Discovery: [`docs/TOPOLOGY-DISCOVERY-README.md`](docs/TOPOLOGY-DISCOVERY-README.md)
 
 ---
 
@@ -27,7 +28,7 @@ Cherwood Health already had bash scripts doing nightly config backups. This proj
 
 ## What it actually does
 
-Every night at 2:00 AM:
+Every night at 9:00 PM Eastern:
 
 1. **Connects** to the FortiGate 60E, Cisco Catalyst 3560E, and Cisco 1921 ISR over SSH using a dedicated, narrowly-scoped service account — not a shared admin login
 2. **Pulls** the full running configuration from each
@@ -35,8 +36,17 @@ Every night at 2:00 AM:
 4. **Commits** every snapshot into a local Git repository — real, permanent, diffable history
 5. **Compares** the new pull against the last known-good commit 15 minutes later, flagging anything that genuinely changed
 6. **Displays** live pass/fail status for all three devices on an internal Flask dashboard
+7. **Rediscovers** the live network topology via LLDP 15 minutes after that, and regenerates the visual diagram — so the map is never stale documentation someone forgot to update
 
 No cloud service, no SaaS dependency, no manual step.
+
+## Automated Topology Discovery
+
+Extends the toolkit with a nightly pipeline that pulls live LLDP neighbor data from every device, normalizes it across two completely different vendor formats (Cisco IOS vs. FortiOS), and renders it as a diagram served on its own dashboard route — `/topology`.
+
+Cisco and Fortinet expose LLDP through entirely different commands and output formats, and neither gives the complete picture in a single call: Cisco's detail output omits the local interface entirely (requiring a second command cross-referenced by port ID), and FortiGate uses a different command family altogether (`diagnose lldprx`, not `show`). Full writeup — including the exact bugs hit building this, like the same physical link showing up as two edges because each device reports its neighbor's name differently — is in [`docs/TOPOLOGY-DISCOVERY-README.md`](docs/TOPOLOGY-DISCOVERY-README.md).
+
+**Live diagram:** [networksolutions.tarunc.com/topology](https://networksolutions.tarunc.com/topology)
 
 ## Architecture
 
@@ -66,7 +76,7 @@ Full network design rationale: [Cherwood Health — Architecture](https://github
 
 ## Stack
 
-`Python 3.11` · `Netmiko` · `Paramiko` · `Git` · `Flask` · `cron` · Cisco IOS 15.2 · FortiOS 7.4
+`Python 3.11` · `Netmiko` · `Paramiko` · `Git` · `Flask` · `Graphviz` · `cron` · Cisco IOS 15.2 · FortiOS 7.4
 
 ## The real engineering story
 
@@ -112,6 +122,10 @@ Both bugs are documented in full — including dead ends and things that didn't 
 
 ![Dashboard status](screenshots/dashboard-status.png)
 
+**Auto-generated network topology** — LLDP-discovered, rendered nightly via Graphviz, zero manual maintenance.
+
+![Topology diagram](screenshots/topology-diagram.png)
+
 ## Known limitations (stated honestly, not hidden)
 
 - **Shared privilege level.** `svc-automation` runs at privilege 15 (Cisco) / `super_admin` (FortiGate) — a stated tradeoff, since neither platform has granular role-based CLI access configured in this lab. A production deployment would scope this down to read-only config access specifically.
@@ -128,9 +142,14 @@ Both bugs are documented in full — including dead ends and things that didn't 
 ├── drift_check.py               # Compares latest pull against last commit
 ├── dashboard.py                  # Flask status page
 ├── ios_compat_patch.py          # The Paramiko/Cisco IOS compatibility fix
+├── topology.py                   # LLDP pull from every device (Netmiko)
+├── parse_topology.py             # Normalizes vendor formats into one edge list
+├── render_topology.py            # Graphviz SVG rendering
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   └── TROUBLESHOOTING-LOG.md
+│   ├── TROUBLESHOOTING-LOG.md
+│   ├── TOPOLOGY-DISCOVERY-README.md
+│   └── TOPOLOGY-TROUBLESHOOTING.md
 └── configs/                      # Sanitized example device configs
 ```
 
