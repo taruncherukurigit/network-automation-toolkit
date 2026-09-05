@@ -3,3 +3,4 @@ __pycache__/
 backups/
 *.log
 .env
+topology_raw/
