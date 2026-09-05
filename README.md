@@ -46,7 +46,7 @@ Extends the toolkit with a nightly pipeline that pulls live LLDP neighbor data f
 
 Cisco and Fortinet expose LLDP through entirely different commands and output formats, and neither gives the complete picture in a single call: Cisco's detail output omits the local interface entirely (requiring a second command cross-referenced by port ID), and FortiGate uses a different command family altogether (`diagnose lldprx`, not `show`). Full writeup — including the exact bugs hit building this, like the same physical link showing up as two edges because each device reports its neighbor's name differently — is in [`docs/TOPOLOGY-DISCOVERY-README.md`](docs/TOPOLOGY-DISCOVERY-README.md).
 
-**Live diagram:** [networksolutions.tarunc.com/topology](https://networksolutions.tarunc.com/topology)
+**Live diagram:** [netmap.tarunc.com](https://netmap.tarunc.com)
 
 ## Architecture
 
