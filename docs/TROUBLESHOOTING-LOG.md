@@ -102,7 +102,46 @@ This normalization means the drift check can no longer report *which specific* e
 
 ---
 
-## Bug #3 — Site silently served the wrong content (IPv6/IPv4 loopback mismatch)
+## Bug #3 — A 22-character hostname silently broke a fixed-width CLI parser
+
+### Symptom
+
+Adding a second Cisco 3560E to the network (the spare switch for the [HSRP failover lab](https://github.com/taruncherukurigit/hsrp-failover-lab)) and re-running the topology pipeline produced a nonsense edge label on the rendered diagram: `120 <-> GI0/1`, instead of a real interface pairing.
+
+| Broken | Fixed |
+|---|---|
+| ![Broken topology render](../screenshots/topology-bug-broken.png) | ![Fixed topology render](../screenshots/topology-bug-fixed.png) |
+
+### Diagnosis
+
+Went back to the raw LLDP data feeding the parser. `show lldp neighbors` on the primary 3560E showed:
+
+```
+Device ID           Local Intf     Hold-time  Capability      Port ID
+Cherwood-Financial-SGi0/7          120        B               Gi0/1
+```
+
+Cisco's `Device ID` column is a fixed 20-character width. The new switch's hostname, `Cherwood-Financial-SW2` (22 characters), overflowed that column with zero whitespace separating it from the adjacent `Local Intf` value — `Cherwood-Financial-S` and `Gi0/7` ran together as one unbroken string: `Cherwood-Financial-SGi0/7`.
+
+`parse_cisco_summary()` splits this table on runs of 2+ whitespace characters (`re.split(r"\s{2,}", ...)`) — a reasonable approach for every other device in the network, since every other hostname is short enough to leave real whitespace before the next column. With the overflowing hostname, the glued-together string was read as a single field, shifting every subsequent field one position to the left. The parser ended up storing the **Hold-time** value (`120`) where the local interface name was supposed to go.
+
+No exception was raised anywhere in the pipeline — the output was simply, silently wrong, and plausible enough on a quick glance to be missed without cross-checking the raw source.
+
+### The fix
+
+Renamed the new switch from `Cherwood-Financial-SW2` to `Financial-SW2` (13 characters) — comfortably inside the column width, and matching its `inventory.py` device name exactly, which is also cleaner for `normalize_name()`'s dedup logic than the longer FQDN-style name was. Re-ran the pipeline and confirmed the corrected edge (`GI0/7 <-> GI0/1`) both in the raw `topology.json` output and on the live rendered diagram.
+
+### Why it wasn't fixed at the parser level instead
+
+A more robust fix exists — rewriting `parse_cisco_summary()` to parse by fixed column position rather than whitespace-splitting, which would handle a hostname of any length correctly. That fix touches shared parsing logic used by every device in the fleet, not just this one, so it carries more risk to change under time pressure. The hostname rename was the correct choice for *this* device, immediately — the column-position rewrite remains a legitimate follow-up if a future device's name can't reasonably be shortened.
+
+### Why it matters
+
+This is a bug in already-shipped, previously-verified code — it never surfaced during Topology Discovery's original build because every device name in the network at that time happened to be short enough to avoid it. "Works correctly against every case tested so far" is not the same claim as "works correctly in general," and a fixed-width text parser is a specific, easy-to-miss way that gap shows up: it fails silently with plausible-looking wrong data, rather than loudly with an exception. Design implication carried forward: hostnames in this environment are now deliberately kept short, and that constraint is documented here rather than left as an undocumented trap for the next device added to the network.
+
+---
+
+## Bug #4 — Site silently served the wrong content (IPv6/IPv4 loopback mismatch)
 
 ### Symptom
 
@@ -159,11 +198,11 @@ A `curl` test against `http://localhost:<port>` from the same host is not equiva
 
 ---
 
-## Bug #4 — FortiGuard DNS filtering blocked new and existing subdomains, unpredictably
+## Bug #5 — FortiGuard DNS filtering blocked new and existing subdomains, unpredictably
 
 ### Symptom
 
-While diagnosing Bug #3, `nslookup networksolutions.tarunc.com` returned `208.91.112.55` — not a Cloudflare IP. That address turned out to be the FortiGate's own internal DNS-filter block page IP (a signature already known from an earlier Cherwood Health incident involving DuckDNS and `api.cloudflare.com`). Static domain-filter allow entries were added for `networksolutions.tarunc.com` via the GUI twice; both times, a CLI `show` immediately after confirmed neither entry had actually saved — the same silent GUI-save failure pattern observed earlier in the build with crontab and a dashboard screenshot filename. Adding the entries directly via CLI, then verifying with `show`, resolved it correctly.
+While diagnosing Bug #4, `nslookup networksolutions.tarunc.com` returned `208.91.112.55` — not a Cloudflare IP. That address turned out to be the FortiGate's own internal DNS-filter block page IP (a signature already known from an earlier Cherwood Health incident involving DuckDNS and `api.cloudflare.com`). Static domain-filter allow entries were added for `networksolutions.tarunc.com` via the GUI twice; both times, a CLI `show` immediately after confirmed neither entry had actually saved — the same silent GUI-save failure pattern observed earlier in the build with crontab and a dashboard screenshot filename. Adding the entries directly via CLI, then verifying with `show`, resolved it correctly.
 
 Later in the same session, `tarunc.com` itself — a domain that had been live and unblocked for weeks — also began resolving to the same block-page IP, with no corresponding change made to it. It required its own static allow entries (`tarunc.com` and `*.tarunc.com`), added via CLI directly this time rather than the GUI.
 
@@ -207,4 +246,4 @@ On this FortiGate, GUI edits to DNS filter profiles cannot be trusted to have sa
 
 ## Cross-cutting lesson
 
-Both of the first two bugs were found the same way: **isolate the variable, look at real evidence (debug logs, direct diffs), don't trust the first plausible-looking explanation.** The first patch attempt for Bug #1 was wrong. The first assumption about Bug #2 ("the FortiGate config actually changed") was wrong. The deployment bugs (#3 and #4) extended the same discipline into a different layer — network and DNS rather than code — and needed the same thing: rule out each real component one at a time with direct evidence, rather than assume the most familiar-looking suspect (caching, in both cases) was the actual cause. In every case, the fix that actually worked only became clear after generating real, direct evidence and reading it carefully — the same discipline Cherwood Health's own troubleshooting log describes as *"a check that has never been proven to fail against a real fault is not trustworthy."*
+The first two bugs were found the same way: **isolate the variable, look at real evidence (debug logs, direct diffs), don't trust the first plausible-looking explanation.** The first patch attempt for Bug #1 was wrong. The first assumption about Bug #2 ("the FortiGate config actually changed") was wrong. The parsing bug (#3) and the deployment bugs (#4 and #5) extended the same discipline into different layers — silent data corruption, then network and DNS — rather than code that visibly crashes, and needed the same thing: rule out each real component one at a time with direct evidence, rather than assume the most familiar-looking suspect was the actual cause. In every case, the fix that actually worked only became clear after generating real, direct evidence and reading it carefully — the same discipline Cherwood Health's own troubleshooting log describes as *"a check that has never been proven to fail against a real fault is not trustworthy."*
