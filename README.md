@@ -126,6 +126,12 @@ Both bugs are documented in full — including dead ends and things that didn't 
 
 ![Topology diagram](screenshots/topology-diagram.png)
 
+**Before/after: the hostname-overflow parsing bug (Bug #3)** — a 22-character hostname silently broke a fixed-width CLI parser, producing a nonsense port label (`120 <-> GI0/1`) instead of the real interface pairing. After renaming the device to fit the column width, the pipeline correctly re-resolved the link (`GI0/7 <-> GI0/1`).
+
+| Broken | Fixed |
+|---|---|
+| ![Broken topology render](screenshots/topology-bug-broken.png) | ![Fixed topology render](screenshots/topology-bug-fixed.png) |
+
 ## Known limitations (stated honestly, not hidden)
 
 - **Shared privilege level.** `svc-automation` runs at privilege 15 (Cisco) / `super_admin` (FortiGate) — a stated tradeoff, since neither platform has granular role-based CLI access configured in this lab. A production deployment would scope this down to read-only config access specifically.
