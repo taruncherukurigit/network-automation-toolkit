@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -91,10 +91,10 @@
   </header>
 
   <div class="stats">
-    <div class="stat"><div class="num">03</div><div class="label">Devices managed</div></div>
+    <div class="stat"><div class="num">04</div><div class="label">Devices managed</div></div>
     <div class="stat"><div class="num">01</div><div class="label">System live nightly</div></div>
     <div class="stat"><div class="num">00</div><div class="label">Shared credentials</div></div>
-    <div class="stat"><div class="num">04</div><div class="label">Bugs root-caused</div></div>
+    <div class="stat"><div class="num">05</div><div class="label">Bugs root-caused</div></div>
   </div>
 
   <section>
@@ -105,7 +105,8 @@
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Git version history + drift detection</div><p>Every pull committed, real changes flagged accurately.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Live status dashboard</div><p>Internal Flask page, Trusted-VLAN-only access.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Public deployment — repo, Pages, self-hosted site</div><p>Pushed to GitHub, GitHub Pages mirror enabled, self-hosted at this domain via the existing DMZ container and Cloudflare Tunnel. Two real deployment bugs found and fixed along the way — see below.</p></div></div>
-    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Automated Topology Discovery</div><p>LLDP-based mapping across Cisco IOS and FortiOS, reconciled into one graph and rendered nightly via Graphviz. <a href="https://netmap.tarunc.com">See the live diagram →</a></p></div></div>
+    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Automated Topology Discovery</div><p>LLDP-based mapping across Cisco IOS and FortiOS, reconciled into one graph and rendered nightly via Graphviz.</p></div></div>
+    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Extended to Cherwood Financial</div><p>Added the HSRP failover lab's spare switch to the managed fleet — same nightly backup/drift/topology pipeline, using a per-device password fallback since that switch's IOS doesn't support key-based SSH. <a href="https://netmap.tarunc.com">See the live diagram →</a></p></div></div>
   </section>
 
   <section>
@@ -119,11 +120,19 @@
       <p>FortiGate re-encrypts fields with a random salt on every pull — real ciphertext, zero real change. Would have buried every genuine alert forever. Fixed with normalization before comparison, verified against an empty diff.</p>
     </div>
     <div class="bug">
-      <h3>Bug 03 — the site silently served the wrong content</h3>
+      <h3>Bug 03 — a 22-character hostname silently broke a fixed-width parser</h3>
+      <p>Adding a second Cisco 3560E exposed a bug this toolkit had been silently carrying: <code>show lldp neighbors</code>'s fixed-width Device ID column overflows past 20 characters with no space separating it from the next field. The parser read the Hold-time value as the port instead — no error, just a wrong label on the live diagram. Fixed by shortening the hostname to fit the column.</p>
+    </div>
+    <div class="split" style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--ink);margin-bottom:20px;">
+      <div style="background:var(--bg);padding:16px;"><strong style="display:block;margin-bottom:8px;">Broken</strong><img src="topology-bug-broken.png" style="width:100%;border-radius:2px;" alt="Broken topology render"></div>
+      <div style="background:var(--bg);padding:16px;"><strong style="display:block;margin-bottom:8px;">Fixed</strong><img src="topology-bug-fixed.png" style="width:100%;border-radius:2px;" alt="Fixed topology render"></div>
+    </div>
+    <div class="bug">
+      <h3>Bug 04 — the site silently served the wrong content</h3>
       <p>After deploying this site, the public URL intermittently showed Cherwood Health's page instead. DNS, Cloudflare's cache, the file on disk, and nginx's config all checked out individually correct — the real cause was <code>localhost</code> resolving to either <code>127.0.0.1</code> or <code>::1</code> depending on the connecting process, and this site's nginx block only listened on the IPv4 address. Whichever loopback path the tunnel happened to use decided which site got served. Fixed by adding <code>listen [::]:80;</code> alongside the existing listener — found the identical gap on a second, unrelated port serving <code>tarunc.com</code> shortly after.</p>
     </div>
     <div class="bug">
-      <h3>Bug 04 — DNS filtering blocked the domain, twice, for different reasons</h3>
+      <h3>Bug 05 — DNS filtering blocked the domain, twice, for different reasons</h3>
       <p>The FortiGate's DNS filter redirected this domain to its own block page. A brand-new throwaway test hostname hit the identical block, ruling out anything specific to this project's name. The category grid didn't show an age-based rule either — the exact trigger stayed unconfirmed. What's proven: static domain-filter allow entries fix it, but the GUI silently failed to save them twice; only a CLI write followed by a CLI read-back reliably worked.</p>
     </div>
   </section>
@@ -135,9 +144,7 @@
     </div>
   </section>
 
-  <footer>Division 03 of the <a href="https://tarunc.com">Cherwood Corporation</a> portfolio — <a href="https://cherwood.tarunc.com">Cherwood Health</a> · <a href="https://packetgeist.tarunc.com">Packetgeist</a> · <a href="https://netmap.tarunc.com">Topology Map</a>
-    <a href="https://failover.tarunc.com">Cherwood Financial</a> · <a href="https://github.com/taruncherukurigit/network-automation-toolkit">full repo on GitHub</a> · <a href="https://taruncherukurigit.github.io/network-automation-toolkit/">GitHub Pages mirror</a></footer>
+  <footer>Division 03 of the <a href="https://tarunc.com">Cherwood Corporation</a> portfolio — <a href="https://cherwood.tarunc.com">Cherwood Health</a> · <a href="https://packetgeist.tarunc.com">Packetgeist</a> · <a href="https://netmap.tarunc.com">Topology Map</a> · <a href="https://failover.tarunc.com">Cherwood Financial</a> · <a href="https://github.com/taruncherukurigit/network-automation-toolkit">full repo on GitHub</a> · <a href="https://taruncherukurigit.github.io/network-automation-toolkit/">GitHub Pages mirror</a></footer>
 </div>
 </body>
 </html>
-
