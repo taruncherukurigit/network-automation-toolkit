@@ -2,14 +2,14 @@
 
 **Cherwood Network Solutions** — a real, unattended automation system that backs up, version-controls, and drift-checks the configuration of every core device across the Cherwood portfolio, running nightly with zero manual intervention.
 
-Cherwood Network Solutions is Division 03 of the Cherwood Corporation portfolio, modeling how a small internal MSP would build, secure, and operate the tooling it uses to manage client infrastructure — starting with its first client, Cherwood Health, and now extended to Cherwood Financial.
+Cherwood Network Solutions is Division 03 of the Cherwood Corporation portfolio, modeling how a small internal MSP would build, secure, and operate the tooling it uses to manage client infrastructure — starting with its first client, Cherwood Health, and now extended to Cherwood Financial and Cherwood Foundation.
 
 > 🏗️ Architecture & design rationale: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 > 🐛 Real troubleshooting log (every bug, in full): [`docs/TROUBLESHOOTING-LOG.md`](docs/TROUBLESHOOTING-LOG.md)
 > 🌐 Live project site: [networksolutions.tarunc.com](https://networksolutions.tarunc.com)
 > 🔁 GitHub Pages mirror: [taruncherukurigit.github.io/network-automation-toolkit](https://taruncherukurigit.github.io/network-automation-toolkit/)
 > 💼 Personal portfolio: [tarunc.com](https://tarunc.com)
-> 📦 Related projects: [cherwood-health](https://github.com/taruncherukurigit/cherwood-health) · [hsrp-failover-lab](https://github.com/taruncherukurigit/hsrp-failover-lab) · [plainsboro-library-survey](https://github.com/taruncherukurigit/plainsboro-library-survey)
+> 📦 Related projects: [cherwood-health](https://github.com/taruncherukurigit/cherwood-health) · [hsrp-failover-lab](https://github.com/taruncherukurigit/hsrp-failover-lab) · [plainsboro-library-survey](https://github.com/taruncherukurigit/plainsboro-library-survey) · [activedirectory-cherwood](https://github.com/taruncherukurigit/activedirectory-cherwood)
 > 🗺️ Automated Topology Discovery: [`docs/TOPOLOGY-DISCOVERY-README.md`](docs/TOPOLOGY-DISCOVERY-README.md)
 
 ---
@@ -172,6 +172,7 @@ Both bugs are documented in full — including dead ends and things that didn't 
 
 - [**Cherwood Health**](https://github.com/taruncherukurigit/cherwood-health) — the 21-part segmented enterprise network this toolkit manages
 - [**Cherwood Financial — HA/Failover Lab**](https://github.com/taruncherukurigit/hsrp-failover-lab) — the HSRP failover pair whose spare switch this toolkit now automates, and the source of Bug #3 above
+- [**Cherwood Foundation — AD/802.1X/SSL-VPN**](https://github.com/taruncherukurigit/activedirectory-cherwood) — identity management delivered as a client engagement
 - [**Packetgeist**](https://github.com/taruncherukurigit/plainsboro-library-survey) — wireless site survey, Cherwood Library division
 
 ---
