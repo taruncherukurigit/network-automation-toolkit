@@ -131,8 +131,8 @@
       <p>Adding a second Cisco 3560E exposed a bug this toolkit had been silently carrying: <code>show lldp neighbors</code>'s fixed-width Device ID column overflows past 20 characters with no space separating it from the next field. The parser read the Hold-time value as the port instead — no error, just a wrong label on the live diagram. Fixed by shortening the hostname to fit the column.</p>
     </div>
     <div class="split" style="display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--ink);margin-bottom:20px;">
-      <div style="background:var(--bg);padding:16px;"><strong style="display:block;margin-bottom:8px;">Broken</strong><img src="topology-bug-broken.png" style="width:100%;border-radius:2px;" alt="Broken topology render"></div>
-      <div style="background:var(--bg);padding:16px;"><strong style="display:block;margin-bottom:8px;">Fixed</strong><img src="topology-bug-fixed.png" style="width:100%;border-radius:2px;" alt="Fixed topology render"></div>
+      <div style="background:var(--bg);padding:16px;"><strong style="display:block;margin-bottom:8px;">Broken</strong><img src="screenshots/topology-bug-broken.png" style="width:100%;border-radius:2px;" alt="Broken topology render"></div>
+      <div style="background:var(--bg);padding:16px;"><strong style="display:block;margin-bottom:8px;">Fixed</strong><img src="screenshots/topology-bug-fixed.png" style="width:100%;border-radius:2px;" alt="Fixed topology render"></div>
     </div>
     <div class="bug">
       <h3>Bug 04 — the site silently served the wrong content</h3>

@@ -66,7 +66,7 @@ the endpoint, auth, and payload shape before any of it got wired into
 "did I break my working drift-check script" means a failure afterward has
 exactly one place to look.
 
-![API test](screenshots/servicenow-01-api-test.png)
+![API test](../screenshots/servicenow-01-api-test.png)
 
 **2. A real config change, automatically becoming a real Incident.**
 A banner change was made directly on the 3560E. On the next `drift_check.py`
@@ -76,7 +76,7 @@ Moderate (a banner touches none of the High-severity keywords), and
 directly in the Description field, not just a generic "something changed"
 message.
 
-![Incident auto-created with full diff](screenshots/servicenow-02-incident-created.png)
+![Incident auto-created with full diff](../screenshots/servicenow-02-incident-created.png)
 
 **3. A real Change Request, run through the actual approval workflow.**
 Rather than force the record's state field directly, the Change Request was
@@ -87,14 +87,14 @@ production change actually looks like -- and hitting (and solving) the "why
 won't the state field just change" friction firsthand is a more credible story
 than a change request that was never actually gated by anything.
 
-![Change Request populated and moving through the workflow](screenshots/servicenow-03-change-request.png)
+![Change Request populated and moving through the workflow](../screenshots/servicenow-03-change-request.png)
 
 **4. Closed out, referencing the real, already-verified result.**
 The Change Request's close notes reference the actual measured outcome from
 the HA/Failover Lab -- 3.33s failover time, confirmed via packet timestamp
 analysis -- rather than a generic "completed successfully" placeholder.
 
-![Change Request fully closed with real result in close notes](screenshots/servicenow-04-change-closed.png)
+![Change Request fully closed with real result in close notes](../screenshots/servicenow-04-change-closed.png)
 
 ## Verification performed
 
