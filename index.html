@@ -87,6 +87,7 @@
     <div class="links">
       <a href="https://netmap.tarunc.com">TOPOLOGY MAP →</a>
       <a href="https://github.com/taruncherukurigit/network-automation-toolkit">GITHUB →</a>
+      <a href="https://github.com/taruncherukurigit/network-automation-toolkit/blob/main/docs/SERVICENOW-INTEGRATION.md">SERVICENOW INTEGRATION →</a>
       <a href="https://github.com/taruncherukurigit/packet-capture-casebook">PACKET CAPTURE CASEBOOK →</a>
       <a href="https://cherwood.tarunc.com">CHERWOOD HEALTH →</a>
       <a href="https://packetgeist.tarunc.com">PACKETGEIST →</a>
@@ -99,7 +100,7 @@
     <div class="stat"><div class="num">04</div><div class="label">Devices managed</div></div>
     <div class="stat"><div class="num">01</div><div class="label">System live nightly</div></div>
     <div class="stat"><div class="num">00</div><div class="label">Shared credentials</div></div>
-    <div class="stat"><div class="num">05</div><div class="label">Bugs root-caused</div></div>
+    <div class="stat"><div class="num">07</div><div class="label">Bugs root-caused</div></div>
   </div>
 
   <section>
@@ -112,6 +113,7 @@
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Public deployment — repo, Pages, self-hosted site</div><p>Pushed to GitHub, GitHub Pages mirror enabled, self-hosted at this domain via the existing DMZ container and Cloudflare Tunnel. Two real deployment bugs found and fixed along the way — see below.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Automated Topology Discovery</div><p>LLDP-based mapping across Cisco IOS and FortiOS, reconciled into one graph and rendered nightly via Graphviz.</p></div></div>
     <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">Extended to Cherwood Financial</div><p>Added the HSRP failover lab's spare switch to the managed fleet — same nightly backup/drift/topology pipeline, using a per-device password fallback since that switch's IOS doesn't support key-based SSH. <a href="https://netmap.tarunc.com">See the live diagram →</a></p></div></div>
+    <div class="log-row"><div class="tag done">Done</div><div><div class="log-title">ServiceNow ITSM integration</div><p>Real config drift now automatically opens a ServiceNow Incident via the Table REST API, with severity mapped from the diff content — detection turned into an actual triage-ready ticket. Verified against a real, formal Change Request walked through ServiceNow's genuine Normal Change approval workflow (New → Assess → Authorize → Scheduled → Implement → Review → Closed), documenting the already-completed HSRP failover cutover test. <a href="https://github.com/taruncherukurigit/network-automation-toolkit/blob/main/docs/SERVICENOW-INTEGRATION.md">Full writeup →</a></p></div></div>
   </section>
 
   <section>
@@ -140,12 +142,20 @@
       <h3>Bug 05 — DNS filtering blocked the domain, twice, for different reasons</h3>
       <p>The FortiGate's DNS filter redirected this domain to its own block page. A brand-new throwaway test hostname hit the identical block, ruling out anything specific to this project's name. The category grid didn't show an age-based rule either — the exact trigger stayed unconfirmed. What's proven: static domain-filter allow entries fix it, but the GUI silently failed to save them twice; only a CLI write followed by a CLI read-back reliably worked.</p>
     </div>
+    <div class="bug">
+      <h3>Bug 06 — a credential almost shipped hardcoded</h3>
+      <p>The ServiceNow integration's instance password was hardcoded directly in <code>drift_check.py</code> during initial testing, to get the API call working quickly. Caught before it was ever committed to git — once a secret lands in commit history, it stays there permanently unless the history itself is rewritten. Fixed by pulling the value from an environment variable set once in root's crontab, since cron doesn't inherit a shell profile the way an interactive session does.</p>
+    </div>
+    <div class="bug">
+      <h3>Bug 07 — a form field that silently refused to change</h3>
+      <p>Advancing the ServiceNow Change Request's state directly via its dropdown did nothing — no error, just no movement. The real cause: ServiceNow's Normal Change model gates state transitions behind an actual approval workflow and a required Assignment Group field, neither of which is obvious from the form alone. Fixed by using <code>Request Approval</code> and working through genuine CAB-style approver records instead of fighting the state field — which is exactly how a real production change model is supposed to behave.</p>
+    </div>
   </section>
 
   <section>
     <h2>Stack</h2>
     <div class="stack">
-      <span>PYTHON 3.11</span><span>NETMIKO</span><span>PARAMIKO</span><span>GRAPHVIZ</span><span>GIT</span><span>FLASK</span><span>CRON</span><span>CISCO IOS</span><span>FORTIOS</span><span>NGINX</span><span>CLOUDFLARE TUNNEL</span>
+      <span>PYTHON 3.11</span><span>NETMIKO</span><span>PARAMIKO</span><span>GRAPHVIZ</span><span>GIT</span><span>FLASK</span><span>CRON</span><span>CISCO IOS</span><span>FORTIOS</span><span>NGINX</span><span>CLOUDFLARE TUNNEL</span><span>SERVICENOW</span>
     </div>
   </section>
 

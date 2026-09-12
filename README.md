@@ -38,6 +38,8 @@ Every night at 9:00 PM Eastern:
 6. **Displays** live pass/fail status for all four devices on an internal Flask dashboard
 7. **Rediscovers** the live network topology via LLDP 15 minutes after that, and regenerates the visual diagram — so the map is never stale documentation someone forgot to update
 
+Real config drift also opens a ServiceNow Incident automatically via the Table REST API, with severity mapped by scanning the diff for ACL/firewall/routing keywords — turning detection into an actual ticket a NOC would triage. Full writeup, verification, and a real Change Request walkthrough: [`docs/SERVICENOW-INTEGRATION.md`](docs/SERVICENOW-INTEGRATION.md).
+
 No cloud service, no SaaS dependency, no manual step.
 
 ## Automated Topology Discovery
@@ -78,7 +80,7 @@ Full network design rationale: [Cherwood Health — Architecture](https://github
 
 ## Stack
 
-`Python 3.11` · `Netmiko` · `Paramiko` · `Git` · `Flask` · `Graphviz` · `cron` · Cisco IOS 15.2 / 12.2 · FortiOS 7.4
+`Python 3.11` · `Netmiko` · `Paramiko` · `Git` · `Flask` · `Graphviz` · `cron` · Cisco IOS 15.2 / 12.2 · FortiOS 7.4 · ServiceNow Table REST API
 
 ## The real engineering story
 
@@ -140,6 +142,12 @@ Both bugs are documented in full — including dead ends and things that didn't 
 |---|---|
 | ![Broken topology render](screenshots/topology-bug-broken.png) | ![Fixed topology render](screenshots/topology-bug-fixed.png) |
 
+**ServiceNow Incident auto-created from real config drift** — detection alone isn't the job; a real network operation needs the change to become a tracked, triaged ticket. A banner change was made directly on the 3560E. On the next scheduled `drift_check.py` run, the diff was detected, the built-in severity mapping correctly classified it as Moderate (no ACL/firewall/routing keywords present), and the script automatically opened `INC0010002` in ServiceNow — with the full unified diff embedded directly in the Incident's Description field, not a generic "something changed" message.
+
+![ServiceNow Incident auto-created with full diff](screenshots/servicenow-02-incident-created.png)
+
+The integration was also verified against a real, formal Change Request (`CHG0030001`), walked through ServiceNow's actual Normal Change approval workflow — New → Assess → Authorize → Scheduled → Implement → Review → Closed, including genuine CAB-style approver records — documenting the already-completed HSRP failover cutover test (3.33s measured failover, from the HA/Failover Lab) rather than a placeholder change. Full writeup, every screenshot, the exact API test, and the bugs hit building it: [`docs/SERVICENOW-INTEGRATION.md`](docs/SERVICENOW-INTEGRATION.md).
+
 ## Known limitations (stated honestly, not hidden)
 
 - **Shared privilege level.** `svc-automation` runs at privilege 15 (Cisco) / `super_admin` (FortiGate) — a stated tradeoff, since neither platform has granular role-based CLI access configured in this lab. A production deployment would scope this down to read-only config access specifically.
@@ -147,6 +155,7 @@ Both bugs are documented in full — including dead ends and things that didn't 
 - **No secrets manager.** SSH private keys and the one device's fallback password live on the automation container's filesystem, protected by VLAN isolation and firewall scope rather than a dedicated vault (HashiCorp Vault, etc.) — a reasonable simplification for a single-operator lab, a real gap in a multi-operator production environment.
 - **Auth method isn't uniform across the fleet.** One device (the HSRP lab's spare switch) authenticates via password instead of key, purely due to its older IOS train — least-privilege is still enforced at the VLAN 60 firewall boundary, but not at the device credential layer for that one device. Documented explicitly rather than hidden.
 - **Dual-stack reverse proxy configuration is easy to get half-right.** The public site itself shipped with a real bug on first deploy: the nginx server block only listened on IPv4 (`listen 80;`), while the Cloudflare Tunnel connecting to it could use either IPv4 or IPv6 loopback — meaning roughly half of all requests silently fell through to a *different* site on the same container instead of erroring out. Full root-cause writeup in [`docs/TROUBLESHOOTING-LOG.md`](docs/TROUBLESHOOTING-LOG.md#bug-4--site-silently-served-the-wrong-content-ipv6ipv4-loopback-mismatch).
+- **ServiceNow severity mapping is keyword-based, not semantic.** `determine_urgency()` scans the diff text for a fixed list of substrings (`access-list`, `permit`, `deny`, `firewall`, `acl`, `ip route`) rather than structurally parsing the configuration change — a change that happens to mention one of these words in an unrelated context (e.g., a comment) would be misclassified. Full detail in [`docs/SERVICENOW-INTEGRATION.md`](docs/SERVICENOW-INTEGRATION.md#known-limitations).
 
 ## Repository structure
 
@@ -154,7 +163,7 @@ Both bugs are documented in full — including dead ends and things that didn't 
 ├── index.html                  # The project site (also served via GitHub Pages)
 ├── inventory.py                # Device list — add a device here, nowhere else
 ├── backup_all.py                # Connects, pulls config, saves + normalizes
-├── drift_check.py               # Compares latest pull against last commit
+├── drift_check.py               # Compares latest pull against last commit; now also opens a ServiceNow Incident on real drift
 ├── dashboard.py                  # Flask status page
 ├── ios_compat_patch.py          # The Paramiko/Cisco IOS compatibility fix
 ├── topology.py                   # LLDP pull from every device (Netmiko)
@@ -164,7 +173,8 @@ Both bugs are documented in full — including dead ends and things that didn't 
 │   ├── ARCHITECTURE.md
 │   ├── TROUBLESHOOTING-LOG.md
 │   ├── TOPOLOGY-DISCOVERY-README.md
-│   └── TOPOLOGY-TROUBLESHOOTING.md
+│   ├── TOPOLOGY-TROUBLESHOOTING.md
+│   └── SERVICENOW-INTEGRATION.md
 └── configs/                      # Sanitized example device configs
 ```
 
