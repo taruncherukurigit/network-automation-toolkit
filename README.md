@@ -1,14 +1,13 @@
 # Network Automation Toolkit
 
-**Cherwood Network Solutions** — a real, unattended automation system that backs up, version-controls, and drift-checks the configuration of every core device across the Cherwood portfolio, running nightly with zero manual intervention.
+A real, unattended automation system that backs up, version-controls and drift-checks the configuration of every core device in my home lab, running nightly with zero manual intervention.
 
-Cherwood Network Solutions is Division 03 of the Cherwood Corporation portfolio, modeling how a small internal MSP would build, secure, and operate the tooling it uses to manage client infrastructure — starting with its first client, Cherwood Health, and now extended to Cherwood Financial and Cherwood Foundation.
+It is built the way an operations team would run tooling for production infrastructure: a dedicated service account, an isolated management VLAN and nightly unattended runs. It covers the segmented network, the HSRP lab and the identity lab.
 
 > 🏗️ Architecture & design rationale: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 > 🐛 Real troubleshooting log (every bug, in full): [`docs/TROUBLESHOOTING-LOG.md`](docs/TROUBLESHOOTING-LOG.md)
-> 🌐 Live project site: [networksolutions.tarunc.com](https://networksolutions.tarunc.com)
-> 🔁 GitHub Pages mirror: [taruncherukurigit.github.io/network-automation-toolkit](https://taruncherukurigit.github.io/network-automation-toolkit/)
-> 💼 Personal portfolio: [tarunc.com](https://tarunc.com)
+> 🌐 Project site: [taruncherukurigit.github.io/network-automation-toolkit](https://taruncherukurigit.github.io/network-automation-toolkit/)
+> 💼 Portfolio: [taruncherukurigit.github.io/portfolio-page](https://taruncherukurigit.github.io/portfolio-page/)
 > 📦 Related projects: [cherwood-health](https://github.com/taruncherukurigit/cherwood-health) · [hsrp-failover-lab](https://github.com/taruncherukurigit/hsrp-failover-lab) · [plainsboro-library-survey](https://github.com/taruncherukurigit/plainsboro-library-survey) · [activedirectory-cherwood](https://github.com/taruncherukurigit/activedirectory-cherwood)
 > 🗺️ Automated Topology Discovery: [`docs/TOPOLOGY-DISCOVERY-README.md`](docs/TOPOLOGY-DISCOVERY-README.md)
 
@@ -16,9 +15,9 @@ Cherwood Network Solutions is Division 03 of the Cherwood Corporation portfolio,
 
 ## Why this project exists
 
-Cherwood Health already had bash scripts doing nightly config backups. This project replaces that with something that actually scales, holds up to real scrutiny, and mirrors how a real MSP would build tooling for a client:
+The segmented network already had bash scripts doing nightly config backups. This project replaces them with something that scales and holds up to real scrutiny:
 
-| | Old approach (Cherwood Health bash scripts) | This toolkit |
+| | Old approach (bash scripts) | This toolkit |
 |---|---|---|
 | Adding a new device | Write a new bash script | Add one entry to `inventory.py` |
 | Version history | Single `latest.txt` diff | Full Git history — any two points in time, ever |
@@ -30,7 +29,7 @@ Cherwood Health already had bash scripts doing nightly config backups. This proj
 
 Every night at 9:00 PM Eastern:
 
-1. **Connects** to the FortiGate 60E, Cisco Catalyst 3560E, Cisco 1921 ISR, and Cisco Catalyst 3560E-24TD-S (the Cherwood Financial HA pair's spare switch) over SSH using a dedicated, narrowly-scoped service account — not a shared admin login
+1. **Connects** to the FortiGate 60E, Cisco Catalyst 3560E, Cisco 1921 ISR, and Cisco Catalyst 3560E-24TD-S (the HSRP lab's spare switch) over SSH using a dedicated, narrowly-scoped service account — not a shared admin login
 2. **Pulls** the full running configuration from each
 3. **Saves** a timestamped permanent snapshot, plus a `latest.txt` pointer used for comparison
 4. **Commits** every snapshot into a local Git repository — real, permanent, diffable history
@@ -48,7 +47,7 @@ Extends the toolkit with a nightly pipeline that pulls live LLDP neighbor data f
 
 Cisco and Fortinet expose LLDP through entirely different commands and output formats, and neither gives the complete picture in a single call: Cisco's detail output omits the local interface entirely (requiring a second command cross-referenced by port ID), and FortiGate uses a different command family altogether (`diagnose lldprx`, not `show`). Full writeup — including the exact bugs hit building this, like the same physical link showing up as two edges because each device reports its neighbor's name differently, and a fixed-width parsing bug found later when a new device's longer hostname broke the same column-based logic — is in [`docs/TOPOLOGY-DISCOVERY-README.md`](docs/TOPOLOGY-DISCOVERY-README.md).
 
-**Live diagram:** [netmap.tarunc.com](https://netmap.tarunc.com)
+**Diagram:** generated nightly from live LLDP data (see the topology docs)
 
 ## Architecture
 
@@ -74,9 +73,9 @@ Cisco and Fortinet expose LLDP through entirely different commands and output fo
 
 **Deliberately isolated on its own VLAN, not sharing a segment with general-purpose containers.** This is the one system in the entire portfolio with SSH credentials to *every* device in the network. Putting it on its own segment with narrow, explicit firewall policies (SSH+SNMP to specific management IPs only) means a compromise here doesn't cascade automatically into every other VLAN. Modeled directly on how a real MSP is scoped into a client's environment: least-privilege, not blanket trust.
 
-**The dashboard is intentionally not internet-facing** — reachable only from the internal Trusted VLAN via an explicit policy, consistent with Cherwood Health's own minimal internet-exposure posture (SSL-VPN and one DMZ site, nothing else).
+**The dashboard is intentionally not internet-facing** — reachable only from the internal Trusted VLAN via an explicit policy, consistent with the segmented network's minimal internet-exposure posture (SSL-VPN and one DMZ site, nothing else).
 
-Full network design rationale: [Cherwood Health — Architecture](https://github.com/taruncherukurigit/cherwood-health/blob/main/docs/ARCHITECTURE.md)
+Full network design rationale: [Segmented Enterprise Network — Architecture](https://github.com/taruncherukurigit/cherwood-health/blob/main/docs/ARCHITECTURE.md)
 
 ## Stack
 
@@ -180,11 +179,11 @@ The integration was also verified against a real, formal Change Request (`CHG003
 
 ## Related projects
 
-- [**Cherwood Health**](https://github.com/taruncherukurigit/cherwood-health) — the 21-part segmented enterprise network this toolkit manages
-- [**Cherwood Financial — HA/Failover Lab**](https://github.com/taruncherukurigit/hsrp-failover-lab) — the HSRP failover pair whose spare switch this toolkit now automates, and the source of Bug #3 above
-- [**Cherwood Foundation — AD/802.1X/SSL-VPN**](https://github.com/taruncherukurigit/activedirectory-cherwood) — identity management delivered as a client engagement
-- [**Packetgeist**](https://github.com/taruncherukurigit/plainsboro-library-survey) — wireless site survey, Cherwood Library division
+- [**Segmented Enterprise Network**](https://github.com/taruncherukurigit/cherwood-health) — the segmented network this toolkit manages
+- [**HSRP High-Availability Lab**](https://github.com/taruncherukurigit/hsrp-failover-lab) — the HSRP pair whose spare switch this toolkit automates, and the source of Bug #3 above
+- [**Active Directory, 802.1X and RADIUS**](https://github.com/taruncherukurigit/activedirectory-cherwood) — the identity stack in the same lab
+- [**Wireless Site Survey**](https://github.com/taruncherukurigit/plainsboro-library-survey) — passive 802.11 survey of a public library
 
 ---
 
-*Division 03 of the Cherwood Corporation portfolio — built by Tarun Cherukuri alongside CCNA/CWNA study.*
+*Built by Tarun Cherukuri in his home lab alongside CCNA study.*
