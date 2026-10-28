@@ -68,4 +68,4 @@ Verifying that a change actually took effect — rather than assuming a save suc
 
 ---
 
-*Part of the [Automated Topology Discovery](./TOPOLOGY-DISCOVERY-README.md) build, under [Cherwood Network Solutions](https://networksolutions.tarunc.com).*
+*Part of the [Automated Topology Discovery](./TOPOLOGY-DISCOVERY-README.md) build, under [Cherwood Network Solutions](https://github.com/taruncherukurigit/network-automation-toolkit).*

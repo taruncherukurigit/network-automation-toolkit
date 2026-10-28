@@ -73,4 +73,4 @@ python3 render_topology.py
 
 ---
 
-*Part of [Cherwood Network Solutions](https://networksolutions.tarunc.com) — Division 03 of the Cherwood Corporation portfolio.*
+*Part of [Cherwood Network Solutions](https://github.com/taruncherukurigit/network-automation-toolkit) — Division 03 of the Cherwood Corporation portfolio.*

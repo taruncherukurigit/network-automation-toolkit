@@ -186,8 +186,8 @@ server {
 ```
 Reload nginx. Verified by testing both loopback paths explicitly and independently:
 ```bash
-curl -s -4 https://networksolutions.tarunc.com | grep "<title>"
-curl -s -6 https://networksolutions.tarunc.com | grep "<title>"
+curl -s -4 https://github.com/taruncherukurigit/network-automation-toolkit | grep "<title>"
+curl -s -6 https://github.com/taruncherukurigit/network-automation-toolkit | grep "<title>"
 ```
 
 The identical bug then recurred on a second, unrelated port (`8081`, serving `tarunc.com`) — a pre-existing server block that had been running correctly for weeks, apparently because whichever loopback path it was getting hit on had simply never surfaced the gap until this session's more careful dual-stack testing. Same fix applied: add `listen [::]:8081;` alongside the existing `listen 8081;`.
